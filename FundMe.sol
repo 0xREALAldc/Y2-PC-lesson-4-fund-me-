@@ -4,26 +4,38 @@ pragma solidity ^0.8.8;
 
 import "./PriceConverter.sol";
 
+error NotOwner();
+
+// 859,541  > first version
+// 839, 981 > added the constant to MINIMUM_USD
+// 816, 516 > added the immutable to i_owner
+// 791, 404 > with the change of ONE require validation
 contract FundMe {
     using PriceConverter for uint256;
 
-    uint256 public minimumUsd = 50 * 1e18; // we need to leave the minimum also with 18 decimals
+    //21,415 - constant     = $ 1,053618
+    //23,515 - non-constant = $ 1,156938
+    uint256 public constant MINIMUM_USD = 50 * 1e18; // we need to leave the minimum also with 18 decimals
+    
     address[] public funders;
     mapping(address => uint256) public addressToAmountFunded;
-    address public owner;
+    
+    // 21,508 - immutable
+    // 23,644 - without immutable
+    address public immutable i_owner;
 
     constructor() {
-        owner = msg.sender;
+        i_owner = msg.sender;
     }
 
     function fund() public payable {
         //want to be able to set a minimum fund amount in USD
         // require(getConversionRate(msg.value) > minimumUsd, "Didn't send enough");//1e18 == 1 * 10 ** 18 == 1000000000000000000
-        require(msg.value.getConversionRate() > minimumUsd, "Didn't send enough");
+        require(msg.value.getConversionRate() > MINIMUM_USD, "Didn't send enough");
 
         //if the condition above was met, we then continue the process
         funders.push(msg.sender);  //we add the address that sent the funds into our `funders` array
-        addressToAmountFunded[msg.sender] = msg.value; //we map the address of the `funder` in our mapping to know how much he has contributed
+        addressToAmountFunded[msg.sender] += msg.value; //we map the address of the `funder` in our mapping to know how much he has contributed
     }
 
     function withdraw() public onlyOwner {
@@ -53,7 +65,11 @@ contract FundMe {
     }
 
     modifier onlyOwner {
-        require(msg.sender == owner, "Senders is not owner!");
+        // require(msg.sender == i_owner, "Sender is not owner!");
+
+        // doing the validation as below, wich can be implemented from solidity 0.8.4, saves gas 
+        // because we don't need to store the string array that's the message above
+        if (msg.sender != i_owner) { revert NotOwner(); }
         _;
     }
 }
