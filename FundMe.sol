@@ -72,4 +72,16 @@ contract FundMe {
         if (msg.sender != i_owner) { revert NotOwner(); }
         _;
     }
+
+    receive() external payable {
+        // if someone sends ETH whithout any data in the transaction, we're going to automatically 
+        // call our function fund()
+        fund();                
+    }
+
+    // if someone sends ETH with data in the transaction, we're going to automatically 
+    // call our function fund() too
+    fallback() external payable {
+        fund();
+    }
 }
